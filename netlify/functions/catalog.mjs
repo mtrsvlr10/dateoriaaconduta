@@ -1,0 +1,2 @@
+import {wrap,response,ready,admin,checked} from '../../server/common.mjs';
+export const handler=wrap(async event=>{if(event.httpMethod!=='GET')return response(405,{error:'Método não permitido.'});if(!ready())return response(200,{products:[],authReady:false});const products=checked(await admin().from('products').select('id,title,cover,category,description,format,price,tone,topics,demo').eq('active',true).order('position'));return response(200,{products,authReady:true})});

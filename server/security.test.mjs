@@ -1,0 +1,17 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createHmac} from 'node:crypto';
+import {validSignature,paymentMatches,isPaid} from './security.mjs';
+import {body,sessionCookies} from './common.mjs';
+import {handler as checkout} from '../netlify/functions/checkout.mjs';
+import {handler as webhook} from '../netlify/functions/payment-webhook.mjs';
+const secret='test-only-secret',ts='1700000000',signature=createHmac('sha256',secret).update(`id:123;request-id:req;ts:${ts};`).digest('hex');
+test('autentica notificação assinada e rejeita alterações',()=>{assert.equal(validSignature('123','req',`ts=${ts},v1=${signature}`,secret),true);assert.equal(validSignature('124','req',`ts=${ts},v1=${signature}`,secret),false);assert.equal(validSignature('123','other',`ts=${ts},v1=${signature}`,secret),false);assert.equal(validSignature('123','req','ts=1,v1=bad',secret),false);assert.equal(validSignature('123','req',`ts=${ts},v1=${signature}`,''),false)});
+const order={id:'order',user_id:'user',product_id:'material',amount:39.9};
+const payment={external_reference:'order',collector_id:12,currency_id:'BRL',transaction_amount:39.9,live_mode:false,metadata:{user_id:'user',product_id:'material'},status:'approved'};
+test('pagamento deve corresponder ao pedido, recebedor e ambiente',()=>{assert.equal(paymentMatches(payment,order,'12',false),true);for(const change of [{transaction_amount:1},{currency_id:'USD'},{collector_id:13},{external_reference:'other'},{live_mode:true},{metadata:{user_id:'other',product_id:'material'}},{metadata:{user_id:'user',product_id:'other'}}])assert.equal(paymentMatches({...payment,...change},order,'12',false),false)});
+test('pagamentos pendentes ou estornados não liberam download',()=>{assert.equal(isPaid(payment),true);assert.equal(isPaid({...payment,status:'pending'}),false);assert.equal(isPaid({...payment,status:'refunded'}),false);assert.equal(isPaid({...payment,transaction_amount_refunded:1}),false)});
+test('sessão usa cookies protegidos e logout remove os dois tokens',()=>{const c=sessionCookies({access_token:'test',refresh_token:'test',expires_in:3600});assert.ok(c.every(x=>x.includes('HttpOnly; Secure; SameSite=Lax')));assert.ok(sessionCookies(null).every(x=>x.includes('Max-Age=0')))});
+test('requisições de outra origem são recusadas',()=>{process.env.SITE_URL='https://store.example';assert.throws(()=>body({httpMethod:'POST',headers:{origin:'https://attacker.example'},body:'{}'}),{status:403});assert.throws(()=>body({httpMethod:'GET',headers:{},body:'{}'}),{status:405});assert.deepEqual(body({httpMethod:'POST',headers:{origin:'https://store.example'},body:'{"productId":"anatomia"}'}),{productId:'anatomia'})});
+test('checkout sem configuração não cobra nem cria pedido',async()=>{delete process.env.SUPABASE_URL;const result=await checkout({httpMethod:'POST',headers:{},body:'{}'});assert.equal(result.statusCode,503)});
+test('webhook sem assinatura não consulta nem libera pagamento',async()=>{const result=await webhook({httpMethod:'POST',headers:{},queryStringParameters:{'data.id':'123'}});assert.equal(result.statusCode,401)});

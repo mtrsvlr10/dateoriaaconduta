@@ -1,0 +1,2 @@
+import {wrap,response,identity,admin,checked} from '../../server/common.mjs';
+export const handler=wrap(async event=>{if(event.httpMethod!=='GET')return response(405,{error:'Método não permitido.'});const i=await identity(event),db=admin();const orders=checked(await db.from('orders').select('product_id,payments!inner(status)').eq('user_id',i.user.id).eq('payments.status','approved'));const ids=[...new Set(orders.map(o=>o.product_id))];const items=ids.length?checked(await db.from('products').select('id,title').in('id',ids)):[];return response(200,{items},i.cookies)});
