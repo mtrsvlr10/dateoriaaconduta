@@ -1,1 +1,1 @@
-{"name":"da-teoria-a-conduta","version":"1.0.0","private":true,"type":"module","scripts":{"dev":"node preview.cjs","test":"node --test server/security.test.mjs"},"dependencies":{"@supabase/supabase-js":"^2.57.0"},"engines":{"node":">=22"}}
+{"name":"da-teoria-a-conduta","version":"1.0.0","private":true,"type":"module","scripts":{"dev":"node preview.cjs","test":"node --test server/security.test.mjs server/admin.test.mjs"},"dependencies":{"@supabase/supabase-js":"^2.57.0"},"engines":{"node":">=22"}}

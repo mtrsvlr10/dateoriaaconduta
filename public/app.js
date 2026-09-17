@@ -1,9 +1,5 @@
 const $ = (s) => document.querySelector(s);
-const examples = [
- {id:'anatomia',title:'Anatomia essencial',cover:'Anatomia\nessencial.',category:'Ciclo básico',description:'Uma visão organizada das estruturas e sistemas do corpo humano.',format:'Resumo digital · PDF',price:39.90,tone:'',topics:['Organização por sistemas','Roteiro de revisão','Espaço para suas anotações'],demo:true},
- {id:'raciocinio',title:'Raciocínio clínico',cover:'Raciocínio\nclínico.',category:'Clínica médica',description:'Conecte o que você estuda à construção do raciocínio clínico.',format:'Caderno de estudos · PDF',price:59.90,tone:'slate',topics:['Organização do pensamento clínico','Estrutura para discussão de casos','Perguntas para revisão'],demo:true},
- {id:'internato',title:'Guia de estudos do internato',cover:'Seu próximo\nplantão.',category:'Internato',description:'Um ponto de partida para planejar seus estudos durante o internato.',format:'Guia de estudos · PDF',price:49.90,tone:'sand',topics:['Planejamento por rotações','Checklist de estudo','Registro de aprendizados'],demo:true}
-];
+const examples = [];
 let products=examples, filter='Todos', mode='login', user=null, pendingProduct=null, authReady=false;
 const money=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

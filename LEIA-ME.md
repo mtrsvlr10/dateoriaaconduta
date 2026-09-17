@@ -31,9 +31,11 @@ Não há credenciais incluídas. Cadastros reais, pagamento e download dependem 
 
 ## Substituir os exemplos
 
-No Table Editor do Supabase, edite a tabela `products`. Você pode alterar título, descrição, preço, categoria, tópicos e cor (`tone`: vazio, `slate` ou `sand`). `cover` aceita quebra de linha. As categorias disponíveis são Ciclo básico, Clínica médica e Internato.
+Abra `/admin.html` ou use o link “Administrar materiais” no rodapé. Entre com a conta de e-mail confirmado indicada na variável privada `ADMIN_EMAIL` da Netlify. O servidor verifica o usuário no Supabase em cada operação; dados de perfil editáveis pelo aluno não concedem acesso.
 
-Envie o PDF ao bucket privado `materials`, informe o caminho em `file_path` (por exemplo `anatomia.pdf`) e mude `demo` para `false` quando o material estiver pronto. O campo `active` controla a exibição. Não coloque os PDFs pagos na pasta pública. Enquanto o Supabase não está conectado, a vitrine usa os exemplos em `public/app.js`.
+No painel, adicione ou edite título, descrição, preço, categoria, tópicos e capa. Envie um PDF de até 20 MB, marque “Publicar na vitrine” e salve. O PDF fica no bucket privado `materials`, enviado por autorização temporária. Para vender, deixe “Material demonstrativo” desmarcado. O servidor exige e valida o arquivo antes da publicação.
+
+“Retirar da vitrine” desativa o material sem apagar os arquivos ou o acesso de compradores anteriores. “Retirar exemplos da vitrine” desativa apenas materiais demonstrativos. Materiais retirados podem ser editados e publicados novamente. Sem conexão, a vitrine não mostra exemplos locais.
 
 ## Verificações antes de vender
 
