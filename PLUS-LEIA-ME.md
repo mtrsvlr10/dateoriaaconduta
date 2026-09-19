@@ -80,3 +80,7 @@ Aplicar plus-roles.sql após plus.sql. Aluno dispensa CRM e recebe contexto educ
 Aplicar `plus-trial-limit.sql` após as migrações anteriores. O teste termina após 120 horas ou 25 análises, o que ocorrer primeiro. O contador é compartilhado entre os contextos hospitalar e ambulatorial e não é reiniciado ao editar o perfil. Reservas são atômicas no banco; erros detectados na IA ou validação geram devolução idempotente. Uma interrupção abrupta da função pode deixar uma reserva pendente, exigindo conciliação pelo identificador operacional. Não são armazenados dados clínicos. A assinatura paga não consome esse saldo.
 
 A IA e as cobranças permanecem desativadas. A conexão da OpenAI retornou HTTP 429 na última verificação; a ativação continua pendente de conexão válida e autorização de envio.
+
+## Administrador Plus
+
+Aplicar `plus-admin.sql`. A associação em `plus_admins` é mantida exclusivamente pelo servidor/console confiável e usa o identificador da conta, com e-mail confirmado. Contas associadas recebem acesso sem assinatura, sem vencimento e sem cota de teste; o checkout bloqueia novas compras para elas. O intervalo de 30 segundos e a elegibilidade do perfil clínico continuam valendo. Essa permissão não concede administração da loja nem verificação de CRM. O uso da API continua sendo cobrado pelo provedor.

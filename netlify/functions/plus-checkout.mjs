@@ -6,6 +6,7 @@ import {plusAccess,billingReady} from '../../server/plus.mjs';
 export const handler=wrap(async event=>{
   const i=await identity(event),input=body(event),db=admin();
   const current=await plusAccess(i.user);
+  if(current.access.kind==='admin')fail(409,'Sua conta administradora já possui acesso gratuito e sem vencimento.');
   if(input.action==='cancel'){
     if(!current.subscription)fail(400,'Você não possui renovação ativa.');
     await mp('/preapproval/'+encodeURIComponent(current.subscription.provider_id),{method:'PUT',body:JSON.stringify({status:'cancelled'})});

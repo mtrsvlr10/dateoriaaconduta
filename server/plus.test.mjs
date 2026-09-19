@@ -5,6 +5,28 @@ import {clinicalInput,validateClinicalOutput} from './clinical.mjs';
 import {handler as analyze} from '../netlify/functions/plus-analyze.mjs';
 import {handler as checkout} from '../netlify/functions/plus-checkout.mjs';
 import {handler as account} from '../netlify/functions/plus-account.mjs';
+test('Plus admin access requires confirmed identity and server-side membership',async()=>{
+  const {plusAccess}=await import('./plus.mjs');
+  const savedFetch=globalThis.fetch,oldUrl=process.env.SUPABASE_URL,oldKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
+  process.env.SUPABASE_URL='https://example.supabase.co';process.env.SUPABASE_SERVICE_ROLE_KEY='test-key';
+  let member=true;
+  globalThis.fetch=async url=>{
+    const path=String(url);
+    const data=path.includes('plus_profiles')?[{role:'student',trial_started_at:'2020-01-01',trial_analyses_used:25}]:path.includes('plus_admins')&&member?[{user_id:'owner'}]:[];
+    return new Response(JSON.stringify(data),{status:200,headers:{'Content-Type':'application/json'}});
+  };
+  try{
+    const owner=await plusAccess({id:'owner',email_confirmed_at:'2026-01-01'});
+    assert.deepEqual(owner.access,{active:true,kind:'admin',expiresAt:null,unlimited:true});
+    assert.equal((await plusAccess({id:'owner'})).access.active,false);
+    member=false;
+    assert.equal((await plusAccess({id:'other',email_confirmed_at:'2026-01-01',user_metadata:{role:'admin'}})).access.active,false);
+  }finally{
+    globalThis.fetch=savedFetch;
+    if(oldUrl===undefined)delete process.env.SUPABASE_URL;else process.env.SUPABASE_URL=oldUrl;
+    if(oldKey===undefined)delete process.env.SUPABASE_SERVICE_ROLE_KEY;else process.env.SUPABASE_SERVICE_ROLE_KEY=oldKey;
+  }
+});
 test('trial quota blocks the 26th analysis and never restricts paid access',()=>{
   const now=Date.parse('2026-09-19T12:00:00Z');
   const profile={trial_started_at:new Date(now-1000).toISOString(),trial_analyses_used:24};

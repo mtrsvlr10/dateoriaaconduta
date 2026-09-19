@@ -5,6 +5,8 @@ export const billingReady=()=>clinicalReady()&&process.env.PLUS_BILLING_ENABLED=
 export async function plusAccess(user){
   const db=admin();
   const profile=checked(await db.from('plus_profiles').select('*').eq('user_id',user.id).maybeSingle());
+  const administrator=user.email_confirmed_at?checked(await db.from('plus_admins').select('user_id').eq('user_id',user.id).maybeSingle()):null;
+  if(administrator)return {profile,access:{active:true,kind:'admin',expiresAt:null,unlimited:true},subscription:null};
   const orders=checked(await db.from('plus_orders').select('*').eq('user_id',user.id).order('created_at',{ascending:false}).limit(30));
   let paidUntil=null;
   for(const order of orders){
