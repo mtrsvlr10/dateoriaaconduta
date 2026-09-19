@@ -52,3 +52,7 @@ Antes do lançamento comercial, preencha os dados reais do vendedor, contato de 
 - [Arquivos privados no Supabase](https://supabase.com/docs/guides/storage/buckets/fundamentals)
 - [Mercado Pago: preferências de pagamento](https://www.mercadopago.com.br/developers/pt/reference/online-payments/checkout-pro-preferences/overview)
 - [Mercado Pago: notificações](https://www.mercadopago.com.br/developers/en/docs/checkout-pro-preferences/payment-notifications)
+
+## App Plus
+
+A primeira versão do aplicativo clínico está em `/plus.html`, com acesso pelo link App Plus na navegação. Consulte `PLUS-LEIA-ME.md` para configuração, valores propostos, testes e limitações. IA e cobranças Plus começam desativadas.
