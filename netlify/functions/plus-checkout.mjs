@@ -1,3 +1,4 @@
+import {eligibleProfile} from '../../server/plus-profile.mjs';
 import {randomUUID} from 'node:crypto';
 import {wrap,response,body,identity,admin,checked,fail,mp} from '../../server/common.mjs';
 import {PLANS} from '../../server/plus-policy.mjs';
@@ -12,7 +13,7 @@ export const handler=wrap(async event=>{
     return response(200,{message:'Renovação cancelada. O período já pago permanece disponível.'},i.cookies);
   }
   if(!billingReady())fail(503,'Os planos estão em pré-lançamento. Nenhuma cobrança está habilitada.');
-  if(!current.profile?.verified_at)fail(403,'Aguarde a verificação do seu cadastro profissional.');
+  if(!eligibleProfile(current.profile))fail(403,'Aguarde a verificação do seu cadastro profissional.');
   if(current.access.kind==='plus'||current.subscription?.status==='authorized')fail(409,'Você já possui um plano ativo.');
   const plan=PLANS.find(p=>p.id===input.planId);if(!plan)fail(400,'Plano inválido.');
   const previous=checked(await db.from('plus_orders').select('*').eq('user_id',i.user.id).in('status',['pending','authorized']).maybeSingle());

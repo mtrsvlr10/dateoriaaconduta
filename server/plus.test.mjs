@@ -69,3 +69,15 @@ test('results from the wrong setting or mixed contexts are rejected',()=>{
   assert.deepEqual(validateClinicalOutput({...value,missing:['Context missing']},'hospital').hospitalCare,[]);
   assert.deepEqual(validateClinicalOutput({...value,urgency:'emergency'},'hospital').hospitalCare,[]);
 });
+
+test('student and doctor profiles enforce distinct requirements without accepting client verification',async()=>{
+ const {profileInput,eligibleProfile}=await import('./plus-profile.mjs');
+ assert.deepEqual(profileInput({name:'Aluno Teste',role:'student',accepted:true,crm:'123',uf:'MS',verified_at:'now'}),{name:'Aluno Teste',role:'student',crm:null,uf:null});
+ assert.throws(()=>profileInput({name:'Teste',role:'doctor',accepted:true}));
+ assert.throws(()=>profileInput({name:'Teste',role:'admin',accepted:true}));
+ assert.throws(()=>profileInput({name:'Teste',role:'student',accepted:false}));
+ assert.equal(eligibleProfile({role:'student'}),true);
+ assert.equal(eligibleProfile({role:'doctor',verified_at:null}),false);
+ assert.equal(eligibleProfile({role:'doctor',verified_at:'2026-09-19'}),true);
+ assert.equal(eligibleProfile({role:'admin',verified_at:'2026-09-19'}),false);
+});

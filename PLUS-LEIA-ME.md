@@ -64,3 +64,13 @@ Fluxos de interface conferidos no navegador. Não foram executados migração SQ
 - Referência para a estrutura dos campos (não validação clínica do produto): [Protocolo de segurança na prescrição, uso e administração de medicamentos — Anvisa](https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/protocolo-de-seguranca-na-prescricao-uso-e-administracao-de-medicamentos).
 
 Próxima etapa de integração: aplicar a migração Plus no Supabase, habilitar os redirecionamentos de autenticação e disponibilizar uma prévia com servidor para testar o login já existente. Depois, configurar a IA e homologar casos fictícios nos dois contextos. As abas não ativam automaticamente a IA nem as cobranças.
+
+## Atualização de integração — 19/09/2026
+
+O aplicativo agora está publicado em https://da-teoria-a-conduta.netlify.app/plus.html. A migração foi aplicada e o retorno /plus.html autorizado no Supabase. Login com a sessão existente do titular foi verificado na tela Minha conta. As observações anteriores sobre ausência de publicação e migração descrevem a entrega inicial e estão superadas. A prévia localhost continua demonstrativa; use o endereço online para login real.
+
+Permanecem pendentes cadastro/validação profissional, configuração e homologação de IA, SMTP para cadastros públicos, pagamentos e requisitos clínicos/regulatórios. clinicalReady e billingReady foram verificados como false no serviço publicado.
+
+## Perfis Aluno e Médico
+
+Aplicar plus-roles.sql após plus.sql. Aluno dispensa CRM e recebe contexto educacional na análise, definido pelo perfil salvo no servidor. Médico requer CRM/UF e verificação. Alterar nome, CRM, UF ou tipo de perfil remove a verificação anterior; o início do teste nunca é sobrescrito. As tabelas continuam privadas. IA e cobranças permanecem desativadas.

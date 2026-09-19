@@ -4,3 +4,4 @@ node_modules-before-move/
 .netlify/
 *.zip
 .deployment-tools/
+.pnpm-store/
