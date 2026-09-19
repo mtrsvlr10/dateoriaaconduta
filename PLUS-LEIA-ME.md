@@ -67,7 +67,7 @@ Próxima etapa de integração: aplicar a migração Plus no Supabase, habilitar
 
 ## Atualização de integração — 19/09/2026
 
-O aplicativo agora está publicado em https://da-teoria-a-conduta.netlify.app/plus.html. A migração foi aplicada e o retorno /plus.html autorizado no Supabase. Login com a sessão existente do titular foi verificado na tela Minha conta. As observações anteriores sobre ausência de publicação e migração descrevem a entrega inicial e estão superadas. A prévia localhost continua demonstrativa; use o endereço online para login real.
+O aplicativo agora está publicado em `/plus.html` no domínio publicado. A migração foi aplicada e o retorno /plus.html autorizado no Supabase. Login com a sessão existente do titular foi verificado na tela Minha conta. As observações anteriores sobre ausência de publicação e migração descrevem a entrega inicial e estão superadas. A prévia localhost continua demonstrativa; use o endereço online para login real.
 
 Permanecem pendentes cadastro/validação profissional, configuração e homologação de IA, SMTP para cadastros públicos, pagamentos e requisitos clínicos/regulatórios. clinicalReady e billingReady foram verificados como false no serviço publicado.
 
