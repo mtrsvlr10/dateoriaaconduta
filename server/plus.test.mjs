@@ -5,6 +5,18 @@ import {clinicalInput,validateClinicalOutput} from './clinical.mjs';
 import {handler as analyze} from '../netlify/functions/plus-analyze.mjs';
 import {handler as checkout} from '../netlify/functions/plus-checkout.mjs';
 import {handler as account} from '../netlify/functions/plus-account.mjs';
+test('trial quota blocks the 26th analysis and never restricts paid access',()=>{
+  const now=Date.parse('2026-09-19T12:00:00Z');
+  const profile={trial_started_at:new Date(now-1000).toISOString(),trial_analyses_used:24};
+  assert.equal(accessState(profile,null,now).trialRemaining,1);
+  assert.equal(accessState(profile,null,now).active,true);
+  profile.trial_analyses_used=25;
+  assert.equal(accessState(profile,null,now).kind,'quota');
+  assert.equal(accessState(profile,null,now).active,false);
+  assert.equal(accessState(profile,new Date(now+1000).toISOString(),now).kind,'plus');
+  assert.equal(accessState(profile,null,now+5*DAY).kind,'expired');
+  assert.equal(accessState(null,null,now).trialRemaining,25);
+});
 test('trial ends exactly at five days and never restarts after expiry',()=>{
   const start=Date.parse('2026-01-01T10:00:00Z'),profile={trial_started_at:new Date(start).toISOString()};
   assert.equal(accessState(profile,null,start+5*DAY-1).active,true);

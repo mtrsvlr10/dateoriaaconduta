@@ -74,3 +74,9 @@ Permanecem pendentes cadastro/validação profissional, configuração e homolog
 ## Perfis Aluno e Médico
 
 Aplicar plus-roles.sql após plus.sql. Aluno dispensa CRM e recebe contexto educacional na análise, definido pelo perfil salvo no servidor. Médico requer CRM/UF e verificação. Alterar nome, CRM, UF ou tipo de perfil remove a verificação anterior; o início do teste nunca é sobrescrito. As tabelas continuam privadas. IA e cobranças permanecem desativadas.
+
+## Limite do teste gratuito
+
+Aplicar `plus-trial-limit.sql` após as migrações anteriores. O teste termina após 120 horas ou 25 análises, o que ocorrer primeiro. O contador é compartilhado entre os contextos hospitalar e ambulatorial e não é reiniciado ao editar o perfil. Reservas são atômicas no banco; erros detectados na IA ou validação geram devolução idempotente. Uma interrupção abrupta da função pode deixar uma reserva pendente, exigindo conciliação pelo identificador operacional. Não são armazenados dados clínicos. A assinatura paga não consome esse saldo.
+
+A IA e as cobranças permanecem desativadas. A conexão da OpenAI retornou HTTP 429 na última verificação; a ativação continua pendente de conexão válida e autorização de envio.

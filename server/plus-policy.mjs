@@ -1,4 +1,5 @@
 export const DAY = 86400000;
+export const TRIAL_ANALYSIS_LIMIT=25;
 export const PLANS = Object.freeze([
   {id:'monthly',name:'30 dias',price:59.90,days:30,months:0,recurring:true},
   {id:'quarterly',name:'90 dias',price:159.90,days:90,months:0,recurring:false},
@@ -16,8 +17,9 @@ export function periodEnd(start,plan){
 export function accessState(profile,paidUntil,now=Date.now()){
   if(Date.parse(paidUntil)>now)return {active:true,kind:'plus',expiresAt:paidUntil};
   const end=profile?.trial_started_at?Date.parse(profile.trial_started_at)+5*DAY:0;
-  if(end>now)return {active:true,kind:'trial',expiresAt:new Date(end).toISOString(),daysLeft:Math.ceil((end-now)/DAY)};
-  return {active:false,kind:end?'expired':'new',expiresAt:end?new Date(end).toISOString():null};
+  const trial={trialLimit:TRIAL_ANALYSIS_LIMIT,trialRemaining:Math.max(0,TRIAL_ANALYSIS_LIMIT-(profile?.trial_analyses_used||0))};
+  if(end>now)return {...trial,active:trial.trialRemaining>0,kind:trial.trialRemaining>0?'trial':'quota',expiresAt:new Date(end).toISOString(),daysLeft:Math.ceil((end-now)/DAY)};
+  return {...trial,active:false,kind:end?'expired':'new',expiresAt:end?new Date(end).toISOString():null};
 }
 export function matchesPlusPayment(payment,order,collector,live){
   return payment.external_reference===order.id && String(payment.collector_id)===String(collector)
