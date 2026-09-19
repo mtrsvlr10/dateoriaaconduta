@@ -14,6 +14,8 @@ if(!key||!model){
     });
     if(!response.ok){
       // Do not print provider bodies: they may contain credentials or identifiers.
+      const errorData=await response.json().catch(()=>null);
+      if(errorData?.error?.code==='insufficient_quota')throw new Error('API credits or spending quota unavailable');
       const hints={401:'Invalid API key',403:'Model or project permission denied',404:'Model unavailable',429:'API quota or rate limit reached'};
       throw new Error(hints[response.status]||`Provider HTTP ${response.status}`);
     }
@@ -24,6 +26,7 @@ if(!key||!model){
     console.log('AI connection and structured response verified. This is not clinical validation.');
   }catch(error){
     console.error('AI connection check failed:',error.name==='TimeoutError'?'Provider timeout':error.message.replace(/sk-[\w-]+/g,'[redacted]'));
-    process.exitCode=1;
+    // An unavailable optional AI service must not block store-only deployments.
+    process.exitCode=enabled==='true'?1:0;
   }
 }
