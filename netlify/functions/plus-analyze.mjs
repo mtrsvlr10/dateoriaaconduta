@@ -20,7 +20,7 @@ export const handler=wrap(async event=>{
   const output=data.output?.flatMap(o=>o.content||[])||[];
   if(output.some(o=>o.type==='refusal'))fail(422,'Não foi possível analisar este caso. Revise os dados e faça a avaliação clínica.');
   let value;try{value=JSON.parse(output.filter(o=>o.type==='output_text').map(o=>o.text).join(''))}catch{fail(502,'Resposta incompleta. Nenhuma prescrição foi gerada.')}
-  return response(200,{result:validateClinicalOutput(value,input.setting),demo:false,role:account.profile.role},i.cookies);
+  return response(200,{result:validateClinicalOutput(value,input.setting,input),demo:false,role:account.profile.role},i.cookies);
   }catch(error){
     if(requestId){try{checked(await admin().rpc('plus_refund_trial',{uid:i.user.id,request_id:requestId}))}catch{console.error('Trial refund failed; request:',requestId)}}
     throw error;

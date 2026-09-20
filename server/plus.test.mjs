@@ -64,7 +64,7 @@ test('payment must match order, amount, currency, collector, mode and approval',
 test('clinical input requires consent, complete context and plausible age',()=>{
   const input=Object.fromEntries(['weight','sex','pregnancy','complaint','history','exam','vitals','allergies','medications','renal','hepatic'].map(f=>[f,'desconhecido']));Object.assign(input,{age:'35',consent:true,setting:'outpatient',followUp:'Retorno disponível'});
   assert.equal(clinicalInput(input).age,'35');
-  for(const invalid of [{consent:false},{age:'-1'},{age:'121'},{allergies:''},{complaint:'a'.repeat(2001)}])assert.throws(()=>clinicalInput({...input,...invalid}));
+  for(const invalid of [{consent:false},{age:'-1'},{age:'121'},{complaint:''},{complaint:'a'.repeat(2001)}])assert.throws(()=>clinicalInput({...input,...invalid}));
 });
 test('missing information and emergencies suppress prescriptions',()=>{
   const rx=Object.fromEntries(['drug','presentation','dose','route','frequency','duration','quantity','instructions','preparation','infusion','monitoring'].map(f=>[f,'example']));
@@ -87,11 +87,11 @@ test('each care setting requires its own context and drops fields from the other
   Object.assign(input,{age:'35',consent:true,setting:'outpatient',followUp:'Retorno agendado',unit:'Enfermaria'});
   assert.equal(clinicalInput(input).unit,undefined);
   assert.throws(()=>clinicalInput({...input,setting:'other'}));
-  assert.throws(()=>clinicalInput({...input,setting:'hospital'}));
+  assert.equal(clinicalInput({...input,setting:'hospital'}).admission,'Desconhecido');
   const hospital={...input,setting:'hospital',admission:'Primeiro dia',diet:'Desconhecido',devices:'Desconhecido',fluidBalance:'Desconhecido'};
   assert.equal(clinicalInput(hospital).followUp,undefined);
   assert.equal(clinicalInput(hospital).unit,'Enfermaria');
-  for(const key of ['unit','admission','diet','devices','fluidBalance'])assert.throws(()=>clinicalInput({...hospital,[key]:''}));
+  for(const key of ['unit','admission','diet','devices','fluidBalance'])assert.equal(clinicalInput({...hospital,[key]:''})[key],'Desconhecido');
 });
 test('results from the wrong setting or mixed contexts are rejected',()=>{
   const value={setting:'hospital',summary:'Example',urgency:'routine',alerts:[],missing:[],hypotheses:[],conduct:[],references:[],prescription:[],outpatientCare:[],hospitalCare:[{category:'Reavaliação',instruction:'Example only'}]};
@@ -115,3 +115,15 @@ test('student and doctor profiles enforce distinct requirements without acceptin
  assert.equal(eligibleProfile({role:'doctor',verified_at:'2026-09-19'}),true);
  assert.equal(eligibleProfile({role:'admin',verified_at:'2026-09-19'}),false);
 });
+
+ test('partial case keeps assessment plans but cannot produce an unchecked prescription',()=>{
+ const input=clinicalInput({setting:'outpatient',consent:true,complaint:'Caso sintético: dor há dois dias'});
+ assert.equal(input.age,'Desconhecido');assert.equal(input.exam,'Desconhecido');
+ assert.throws(()=>clinicalInput({setting:'outpatient',consent:true}));
+ const rx=Object.fromEntries(['drug','presentation','dose','route','frequency','duration','quantity','instructions','preparation','infusion','monitoring'].map(k=>[k,'example']));
+ const value={setting:'outpatient',summary:'Example',urgency:'routine',alerts:[],missing:[],hypotheses:[],conduct:[],references:[],prescription:[rx],hospitalCare:[],outpatientCare:[],examPlan:['Avaliar achados'],nextSteps:['Completar avaliação'],reassessment:['Definir urgência presencialmente'],treatmentOptions:['Opção condicional para estudo']};
+ const result=validateClinicalOutput(structuredClone(value),'outpatient',input);
+ assert.deepEqual(result.prescription,[]);assert.equal(result.examPlan.length,1);assert.equal(result.reassessment.length,1);assert.equal(result.treatmentOptions.length,1);
+ assert.deepEqual(validateClinicalOutput({...value,urgency:'emergency'},'outpatient',input).treatmentOptions,[]);
+ assert.throws(()=>validateClinicalOutput({...value,examPlan:[123]},'outpatient',input));
+ });

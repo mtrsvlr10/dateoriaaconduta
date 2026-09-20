@@ -84,3 +84,7 @@ A IA e as cobranças permanecem desativadas. A conexão da OpenAI retornou HTTP 
 ## Administrador Plus
 
 Aplicar `plus-admin.sql`. A associação em `plus_admins` é mantida exclusivamente pelo servidor/console confiável e usa o identificador da conta, com e-mail confirmado. Contas associadas recebem acesso sem assinatura, sem vencimento e sem cota de teste; o checkout bloqueia novas compras para elas. O intervalo de 30 segundos e a elegibilidade do perfil clínico continuam valendo. Essa permissão não concede administração da loja nem verificação de CRM. O uso da API continua sendo cobrado pelo provedor.
+
+## Análise com dados parciais
+
+Queixa e consentimento são obrigatórios; campos clínicos vazios viram Desconhecido no servidor. A análise inclui exame físico dirigido, próximos passos e prazo condicionado de retorno/reavaliação. Opções medicamentosas para discussão são separadas do rascunho e não incluem posologia. Dados essenciais ausentes continuam impedindo prescrição completa; planos de avaliação permanecem visíveis e copiáveis. Urgência/emergência remove opções medicamentosas. Essa alteração não representa validação clínica dos resultados.
