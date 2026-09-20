@@ -135,3 +135,19 @@ test('only trusted administrator flag exempts doctor test profile from CRM',asyn
  assert.deepEqual(profileInput(input,{administrator:true}),{name:'Admin Teste',role:'doctor',crm:null,uf:null});
  assert.throws(()=>profileInput({...input,accepted:false},{administrator:true}));
 });
+
+
+test('medication explanations identify missing data and preserve supported study options',()=>{
+ const base={setting:'outpatient',summary:'Synthetic',urgency:'routine',alerts:[],missing:[],hypotheses:[],conduct:[],references:[],prescription:[],hospitalCare:[],outpatientCare:[],treatmentOptions:['Named educational option'],medicationLimitations:['Case-specific limitation']};
+ const input=clinicalInput({setting:'outpatient',consent:true,complaint:'Synthetic study case'});
+ const result=validateClinicalOutput(structuredClone(base),'outpatient',input);
+ assert.equal(result.treatmentOptions.length,1);
+ assert.ok(result.medicationLimitations.some(v=>v.includes('alergias')));
+ assert.ok(result.medicationLimitations.includes('Case-specific limitation'));
+ const emergency=validateClinicalOutput({...structuredClone(base),urgency:'emergency'},'outpatient',input);
+ assert.deepEqual(emergency.treatmentOptions,[]);
+ assert.ok(emergency.medicationLimitations.some(v=>v.includes('presencial imediata')));
+ assert.throws(()=>validateClinicalOutput({...base,medicationLimitations:[5]},'outpatient'));
+ const empty=validateClinicalOutput({...base,urgency:'insufficient',treatmentOptions:[],medicationLimitations:[]},'outpatient');
+ assert.ok(empty.medicationLimitations.length>0);
+});
