@@ -12,9 +12,10 @@ export const handler=wrap(async event=>{
     const input=body(event);
     if(input.action!=='activate')fail(400,'Ação inválida.');
     if(!i.user.email_confirmed_at)fail(403,'Confirme seu e-mail antes de salvar o cadastro.');
-    const profile=profileInput(input);
+    const current=await plusAccess(i.user);
+    const profile=profileInput(input,{administrator:current.access.kind==='admin'});
     checked(await admin().rpc('plus_save_profile',{uid:i.user.id,full_name:profile.name,profile_role:profile.role,crm_number:profile.crm,state_uf:profile.uf}));
-    if(clinicalReady())checked(await admin().rpc('plus_start_trial',{uid:i.user.id}));
+    if(clinicalReady()&&current.access.kind!=='admin')checked(await admin().rpc('plus_start_trial',{uid:i.user.id}));
   }
   const account=await plusAccess(i.user);
   return response(200,{...config,user:{email:i.user.email},profile:account.profile,access:account.access,subscription:account.subscription?{status:account.subscription.status}:null},i.cookies);

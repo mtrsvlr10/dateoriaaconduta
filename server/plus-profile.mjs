@@ -1,9 +1,9 @@
 import {fail} from './common.mjs';
-export function profileInput(input){
+export function profileInput(input,{administrator=false}={}){
   if(!['student','doctor'].includes(input.role)||input.accepted!==true)fail(400,'Selecione Aluno ou Médico e confirme a declaração.');
   if(typeof input.name!=='string'||input.name.trim().length<3||input.name.length>100)fail(400,'Informe seu nome completo.');
   const profile={name:input.name.trim(),role:input.role,crm:null,uf:null};
-  if(input.role==='doctor'){
+  if(input.role==='doctor'&&!administrator){
     if(!/^\d{1,8}$/.test(input.crm||'')||!['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].includes(input.uf))fail(400,'Confira o CRM e o estado.');
     profile.crm=input.crm;profile.uf=input.uf;
   }

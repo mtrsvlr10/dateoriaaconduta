@@ -127,3 +127,11 @@ test('student and doctor profiles enforce distinct requirements without acceptin
  assert.deepEqual(validateClinicalOutput({...value,urgency:'emergency'},'outpatient',input).treatmentOptions,[]);
  assert.throws(()=>validateClinicalOutput({...value,examPlan:[123]},'outpatient',input));
  });
+
+test('only trusted administrator flag exempts doctor test profile from CRM',async()=>{
+ const {profileInput}=await import('./plus-profile.mjs');
+ const input={name:'Admin Teste',role:'doctor',accepted:true,administrator:true,verified_at:'now'};
+ assert.throws(()=>profileInput(input));
+ assert.deepEqual(profileInput(input,{administrator:true}),{name:'Admin Teste',role:'doctor',crm:null,uf:null});
+ assert.throws(()=>profileInput({...input,accepted:false},{administrator:true}));
+});
