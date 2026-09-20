@@ -151,3 +151,29 @@ test('medication explanations identify missing data and preserve supported study
  const empty=validateClinicalOutput({...base,urgency:'insufficient',treatmentOptions:[],medicationLimitations:[]},'outpatient');
  assert.ok(empty.medicationLimitations.length>0);
 });
+
+
+test('structured medication options retain conditions for partial cases and reject incomplete or dosing fields',()=>{
+ const option={drug:'Synthetic option',rationale:'Synthetic hypothesis',beforeConsidering:'Confirm essential facts',avoidWhen:'Synthetic contraindication'};
+ const base={setting:'hospital',summary:'Synthetic',urgency:'routine',alerts:[],missing:[],hypotheses:[],conduct:[],references:[],prescription:[],hospitalCare:[],outpatientCare:[],medicationOptions:[option]};
+ const input=clinicalInput({setting:'hospital',consent:true,complaint:'Synthetic case'});
+ assert.deepEqual(validateClinicalOutput(structuredClone(base),'hospital',input).medicationOptions,[option]);
+ for(const urgency of ['urgent','emergency'])assert.deepEqual(validateClinicalOutput({...structuredClone(base),urgency},'hospital',input).medicationOptions,[]);
+ for(const invalid of [{...option,avoidWhen:''},{...option,dose:'10'},null])assert.throws(()=>validateClinicalOutput({...base,medicationOptions:[invalid]},'hospital',input));
+});
+
+test('medication cards escape model text and include conditions in editable draft',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ const {runInNewContext}=await import('node:vm');
+ const source=await readFile(new URL('../public/plus.js',import.meta.url),'utf8');
+ const nodes={};
+ const context={result:null,demo:false,setting:'hospital',account:{profile:{role:'student'}},settingLabel:()=> 'hospitalar',esc:s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'),$:s=>nodes[s]??=( {hidden:false,innerHTML:'',textContent:''} )};
+ runInNewContext(source.slice(source.indexOf('function renderResult('),source.indexOf('function loadDemo(')),context);
+ context.renderResult({summary:'Test',alerts:[],missing:[],hypotheses:[],conduct:[],references:[],prescription:[],medicationOptions:[{drug:'<script>bad</script>',rationale:'Reason',beforeConsidering:'Confirm allergy',avoidWhen:'Do not use when contraindicated'}]},false);
+ const html=nodes['#result-content'].innerHTML;
+ assert.ok(!html.includes('<script>'));
+ assert.ok(html.includes('&lt;script&gt;'));
+ assert.ok(html.includes('Antes de considerar: Confirm allergy'));
+ assert.ok(html.includes('Quando evitar: Do not use when contraindicated'));
+ assert.ok(html.includes('Opções medicamentosas para discussão'));
+});
