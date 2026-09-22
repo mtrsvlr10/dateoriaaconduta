@@ -79,18 +79,6 @@ function renderResult(value,isDemo){
     rx=`PRESCRIÇÃO HOSPITALAR — RASCUNHO\nPara revisão médica — sem validade de receita.${value.alerts?.length?'\n\nATENÇÃO\n'+value.alerts.join('\n'):''}\n\n${items.length?items.map((v,i)=>`${i+1}. ${v}`).join('\n\n'):'Nenhum item de prescrição sustentado nesta análise.'}${options.length?'\n\nOPÇÕES A CONFIRMAR — NÃO SÃO ORDENS DE ADMINISTRAÇÃO\n'+options.join('\n\n'):''}${medicationExplanation}${value.examPlan?.length?'\n\nEXAME FÍSICO A REALIZAR\n'+value.examPlan.join('\n\n'):''}`;
   }
   $('#result-content').innerHTML=`<div class="result-alert">${isDemo?'DEMONSTRAÇÃO · Exemplo fixo e fictício. Não é uma análise dos dados preenchidos nem uma receita.':account.access?.kind==='admin'&&!account.profile?.verified_at?'TESTE ADMINISTRATIVO · Discussão educacional, sem verificação de CRM.':account.profile?.role==='student'?'MODO ALUNO · Discussão educacional. Confira com seu professor ou preceptor; não utilizar para atendimento.':'RASCUNHO · Confirme os dados, as hipóteses e a conduta. Não é uma receita assinada.'}</div><p class="result-summary">${esc(value.summary)}</p>${section('Pontos de atenção',value.alerts)}${section('Informações pendentes',value.missing)}${section('Hipóteses para avaliação',value.hypotheses)}${section('Conduta para revisão',value.conduct)}${optionCards}${section('Opções medicamentosas condicionais',value.treatmentOptions||[])}${section('Exame físico a realizar',value.examPlan||[])}${section('Próximas horas e dias',value.nextSteps||[])}${section(setting==='hospital'?'Reavaliação hospitalar':'Retorno ambulatorial',value.reassessment||[])}<section class="result-section"><h3>Prescrição ${settingLabel()} · rascunho</h3><label for="rx-editor">Revise e edite antes de copiar</label><textarea id="rx-editor" class="rx-editor" rows="22" maxlength="24000">${esc(rx)}</textarea><label class="checkbox"><input type="checkbox" id="reviewed"><span>Revisei o rascunho e compreendo que ele não é uma receita válida para dispensação.</span></label><div class="result-tools"><button class="outline" id="copy-draft" disabled>Copiar rascunho</button></div></section>${section('Referências sugeridas para conferência',value.references)}<p class="reference-note">${isDemo?'Caso criado apenas para demonstrar o fluxo.':'Referências fornecidas pelo modelo, sem verificação automática. Confira as fontes originais.'}</p>`;
-  if(value.referenceTopics?.includes('aas-scassst')){
-    const library=$('.pharmacology-library');
-    if(library){
-      const reference=document.createElement('section');
-      reference.className='result-section contextual-reference';
-      reference.innerHTML='<h3>Referência relacionada ao contexto</h3><p>A análise identificou um tema para consulta. Isto não confirma o diagnóstico nem indica este medicamento ao paciente. Leia as contraindicações junto da dose de referência.</p>';
-      const entry=library.querySelector('.drug-reference').cloneNode(true);
-      entry.open=true;
-      reference.append(entry);
-      $('#result-content').append(reference);
-    }
-  }
   $('#reviewed').onchange=()=>$('#copy-draft').disabled=!$('#reviewed').checked;
   $('#rx-editor').oninput=()=>{$('#reviewed').checked=false;$('#copy-draft').disabled=true};
   $('#copy-draft').onclick=async()=>{try{await navigator.clipboard.writeText((demo?'DEMONSTRAÇÃO FICTÍCIA':(account.profile?.role==='student'||(account.access?.kind==='admin'&&!account.profile?.verified_at))?'MODELO EDUCACIONAL — DISCUTIR COM O PRECEPTOR':'RASCUNHO PARA REVISÃO MÉDICA')+' — SEM VALIDADE DE RECEITA\n\n'+$('#rx-editor').value);toast('Rascunho copiado.')}catch{toast('Selecione o texto do rascunho e copie manualmente.')}};
