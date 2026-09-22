@@ -67,9 +67,9 @@ test('clinical input requires consent, complete context and plausible age',()=>{
   for(const invalid of [{consent:false},{age:'-1'},{age:'121'},{complaint:''},{complaint:'a'.repeat(2001)}])assert.throws(()=>clinicalInput({...input,...invalid}));
 });
 test('missing information and emergencies suppress prescriptions',()=>{
-  const rx=Object.fromEntries(['drug','presentation','dose','route','frequency','duration','quantity','instructions','preparation','infusion','monitoring'].map(f=>[f,'example']));
+  const rx=Object.fromEntries(['drug','presentation','dose','route','frequency','duration','quantity','instructions','preparation','infusion','monitoring'].map(f=>[f,'example']));rx.safety={status:'ready',reason:'Synthetic evidence',requiredData:[]};
   const value={setting:'outpatient',hospitalCare:[],outpatientCare:[],summary:'Case',urgency:'routine',alerts:[],missing:[],hypotheses:[],conduct:[],references:[],prescription:[rx]};
-  assert.equal(validateClinicalOutput(structuredClone(value),'outpatient').prescription.length,1);
+  assert.equal(validateClinicalOutput(structuredClone(value),'outpatient',{age:'35',allergies:'Nega',medications:'Nenhum'}).prescription.length,1);
   assert.deepEqual(validateClinicalOutput({...value,missing:['allergies']},'outpatient').prescription,[]);
   assert.deepEqual(validateClinicalOutput({...value,urgency:'emergency'},'outpatient').prescription,[]);
   assert.throws(()=>validateClinicalOutput({...value,prescription:[{drug:'x'}]},'outpatient'));
@@ -94,13 +94,13 @@ test('each care setting requires its own context and drops fields from the other
   for(const key of ['unit','admission','diet','devices','fluidBalance'])assert.equal(clinicalInput({...hospital,[key]:''})[key],'Desconhecido');
 });
 test('results from the wrong setting or mixed contexts are rejected',()=>{
-  const value={setting:'hospital',summary:'Example',urgency:'routine',alerts:[],missing:[],hypotheses:[],conduct:[],references:[],prescription:[],outpatientCare:[],hospitalCare:[{category:'Reavaliação',instruction:'Example only'}]};
+  const value={setting:'hospital',summary:'Example',urgency:'routine',alerts:[],missing:[],hypotheses:[],conduct:[],references:[],prescription:[],outpatientCare:[],hospitalCare:[{category:'Reavaliação',instruction:'Example only',safety:{status:'ready',reason:'Synthetic evidence',requiredData:[]}}]};
   assert.equal(validateClinicalOutput(structuredClone(value),'hospital').hospitalCare.length,1);
   assert.throws(()=>validateClinicalOutput(value,'outpatient'));
   assert.throws(()=>validateClinicalOutput({...value,outpatientCare:['Example']},'hospital'));
   assert.throws(()=>validateClinicalOutput({...value,setting:'outpatient'},'outpatient'));
   assert.throws(()=>validateClinicalOutput({...value,hospitalCare:[{category:'Invalid',instruction:'Example'}]},'hospital'));
-  assert.deepEqual(validateClinicalOutput({...value,missing:['Context missing']},'hospital').hospitalCare,[]);
+  assert.equal(validateClinicalOutput({...value,missing:['Context missing']},'hospital').hospitalCare.length,1);
   assert.deepEqual(validateClinicalOutput({...value,urgency:'emergency'},'hospital').hospitalCare,[]);
 });
 
@@ -120,7 +120,7 @@ test('student and doctor profiles enforce distinct requirements without acceptin
  const input=clinicalInput({setting:'outpatient',consent:true,complaint:'Caso sintético: dor há dois dias'});
  assert.equal(input.age,'Desconhecido');assert.equal(input.exam,'Desconhecido');
  assert.throws(()=>clinicalInput({setting:'outpatient',consent:true}));
- const rx=Object.fromEntries(['drug','presentation','dose','route','frequency','duration','quantity','instructions','preparation','infusion','monitoring'].map(k=>[k,'example']));
+ const rx=Object.fromEntries(['drug','presentation','dose','route','frequency','duration','quantity','instructions','preparation','infusion','monitoring'].map(k=>[k,'example']));rx.safety={status:'ready',reason:'Synthetic evidence',requiredData:[]};
  const value={setting:'outpatient',summary:'Example',urgency:'routine',alerts:[],missing:[],hypotheses:[],conduct:[],references:[],prescription:[rx],hospitalCare:[],outpatientCare:[],examPlan:['Avaliar achados'],nextSteps:['Completar avaliação'],reassessment:['Definir urgência presencialmente'],treatmentOptions:['Opção condicional para estudo']};
  const result=validateClinicalOutput(structuredClone(value),'outpatient',input);
  assert.deepEqual(result.prescription,[]);assert.equal(result.examPlan.length,1);assert.equal(result.reassessment.length,1);assert.equal(result.treatmentOptions.length,1);
@@ -142,7 +142,7 @@ test('medication explanations identify missing data and preserve supported study
  const input=clinicalInput({setting:'outpatient',consent:true,complaint:'Synthetic study case'});
  const result=validateClinicalOutput(structuredClone(base),'outpatient',input);
  assert.equal(result.treatmentOptions.length,1);
- assert.ok(result.medicationLimitations.some(v=>v.includes('alergias')));
+ assert.equal(result.medicationLimitations.length,1);
  assert.ok(result.medicationLimitations.includes('Case-specific limitation'));
  const emergency=validateClinicalOutput({...structuredClone(base),urgency:'emergency'},'outpatient',input);
  assert.deepEqual(emergency.treatmentOptions,[]);
@@ -176,4 +176,43 @@ test('medication cards escape model text and include conditions in editable draf
  assert.ok(html.includes('Antes de considerar: Confirm allergy'));
  assert.ok(html.includes('Quando evitar: Do not use when contraindicated'));
  assert.ok(html.includes('Opções medicamentosas para discussão'));
+});
+
+
+test('routine drafts retain supported items while dropping only drugs and care with missing dependencies',()=>{
+ const rx=Object.fromEntries(['drug','presentation','dose','route','frequency','duration','quantity','instructions','preparation','infusion','monitoring'].map(k=>[k,'synthetic']));
+ const ready={status:'ready',reason:'Synthetic rationale',requiredData:[]};
+ const base={setting:'hospital',summary:'Synthetic',urgency:'routine',alerts:[],missing:['Further follow-up'],hypotheses:[],conduct:[],references:[],outpatientCare:[],prescription:[{...rx,drug:'Supported item',safety:ready},{...rx,drug:'Renal-dependent item',safety:{...ready,requiredData:['renal']}},{...rx,drug:'Pending decision',safety:{...ready,status:'pending'}}],hospitalCare:[{category:'Cuidados',instruction:'Supported care',safety:ready},{category:'Hidratação',instruction:'Pending fluid balance',safety:{...ready,requiredData:['fluidBalance']}}]};
+ const input=clinicalInput({setting:'hospital',consent:true,complaint:'Synthetic nonurgent example',age:'64',allergies:'Nega',medications:'Tratamento informado'});
+ const result=validateClinicalOutput(structuredClone(base),'hospital',input);
+ assert.deepEqual(result.prescription.map(p=>p.drug),['Supported item']);
+ assert.equal(result.hospitalCare.length,1);
+ assert.ok(result.medicationLimitations.some(v=>v.includes('Renal-dependent item')));
+ assert.ok(result.medicationLimitations.some(v=>v.includes('Pending decision')));
+ assert.equal(result.prescription[0].dose,'synthetic');
+ const completed=validateClinicalOutput(structuredClone(base),'hospital',{...input,renal:'Informação fornecida',fluidBalance:'Informação fornecida'});
+ assert.equal(completed.prescription.length,2);assert.equal(completed.hospitalCare.length,2);
+ for(const urgency of ['urgent','emergency','insufficient']){
+  const blocked=validateClinicalOutput({...structuredClone(base),urgency},'hospital',input);
+  assert.equal(blocked.prescription.length,0);assert.equal(blocked.hospitalCare.length,0);
+ }
+ for(const key of ['age','allergies','medications'])assert.equal(validateClinicalOutput(structuredClone(base),'hospital',{...input,[key]:'Desconhecido'}).prescription.length,0);
+ assert.throws(()=>validateClinicalOutput({...structuredClone(base),prescription:[{...rx,safety:{...ready,requiredData:['invented']}}]},'hospital',input));
+ assert.throws(()=>validateClinicalOutput({...structuredClone(base),prescription:[rx]},'hospital',input));
+});
+
+
+test('both draft formats show supported medication details and item rationale',async()=>{
+ const {readFile}=await import('node:fs/promises');const {runInNewContext}=await import('node:vm');
+ const source=await readFile(new URL('../public/plus.js',import.meta.url),'utf8');
+ const rx=Object.fromEntries(['drug','presentation','dose','route','frequency','duration','quantity','instructions','preparation','infusion','monitoring'].map(k=>[k,'fixture-'+k]));
+ rx.safety={status:'ready',reason:'Reason specific to this item',requiredData:[]};
+ for(const setting of ['outpatient','hospital']){
+  const nodes={};const context={result:null,demo:false,setting,account:{profile:{role:'doctor'}},settingLabel:()=>setting,esc:String,$:s=>nodes[s]??={}};
+  runInNewContext(source.slice(source.indexOf('function renderResult('),source.indexOf('function loadDemo(')),context);
+  context.renderResult({summary:'Synthetic',alerts:[],missing:[],hypotheses:[],conduct:[],references:[],prescription:[rx]},false);
+  const html=nodes['#result-content'].innerHTML;
+  for(const field of ['dose','route','frequency','duration','quantity'])assert.ok(html.includes('fixture-'+field));
+  assert.ok(html.includes('Reason specific to this item'));assert.ok(html.includes('1. fixture-drug'));
+ }
 });
