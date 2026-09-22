@@ -177,3 +177,14 @@ test('medication cards escape model text and include conditions in editable draf
  assert.ok(html.includes('Quando evitar: Do not use when contraindicated'));
  assert.ok(html.includes('Opções medicamentosas para discussão'));
 });
+
+
+test('protocol reference lookup never unlocks emergency prescription and rejects unknown reference IDs',()=>{
+ const base={setting:'hospital',summary:'Synthetic',urgency:'emergency',alerts:[],missing:[],hypotheses:[],conduct:[],references:[],prescription:[],hospitalCare:[],outpatientCare:[],referenceTopics:['aas-scassst']};
+ const result=validateClinicalOutput(structuredClone(base),'hospital');
+ assert.deepEqual(result.referenceTopics,['aas-scassst']);
+ assert.deepEqual(result.prescription,[]);
+ assert.deepEqual(result.medicationOptions,[]);
+ assert.throws(()=>validateClinicalOutput({...base,referenceTopics:['invented-drug']},'hospital'));
+ assert.throws(()=>validateClinicalOutput({...base,referenceTopics:'aas-scassst'},'hospital'));
+});
