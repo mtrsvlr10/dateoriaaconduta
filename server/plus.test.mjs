@@ -154,28 +154,28 @@ test('medication explanations identify missing data and preserve supported study
 
 
 test('structured medication options retain conditions for partial cases and reject incomplete or dosing fields',()=>{
- const option={drug:'Synthetic option',presentation:'Synthetic presentation',rationale:'Synthetic hypothesis',beforeConsidering:'Confirm essential facts',avoidWhen:'Synthetic contraindication'};
+ const option={drug:'Synthetic option',category:'confirmation',availability:'Unknown',source:'Synthetic source',presentation:'Synthetic presentation',rationale:'Synthetic hypothesis',beforeConsidering:'Confirm essential facts',avoidWhen:'Synthetic contraindication'};
  const base={setting:'hospital',summary:'Synthetic',urgency:'routine',alerts:[],missing:[],hypotheses:[],conduct:[],references:[],prescription:[],hospitalCare:[],outpatientCare:[],medicationOptions:[option]};
  const input=clinicalInput({setting:'hospital',consent:true,complaint:'Synthetic case'});
  assert.deepEqual(validateClinicalOutput(structuredClone(base),'hospital',input).medicationOptions,[option]);
- for(const urgency of ['urgent','emergency'])assert.deepEqual(validateClinicalOutput({...structuredClone(base),urgency},'hospital',input).medicationOptions,[]);
+ for(const urgency of ['urgent','emergency'])assert.deepEqual(validateClinicalOutput({...structuredClone(base),urgency},'hospital',input).medicationOptions,[option]);
  for(const invalid of [{...option,avoidWhen:''},{...option,dose:'10'},null])assert.throws(()=>validateClinicalOutput({...base,medicationOptions:[invalid]},'hospital',input));
 });
 
-test('medication cards escape model text and include conditions in editable draft',async()=>{
+test('medication assessment cards escape model text and show conditions separately',async()=>{
  const {readFile}=await import('node:fs/promises');
  const {runInNewContext}=await import('node:vm');
  const source=await readFile(new URL('../public/plus.js',import.meta.url),'utf8');
  const nodes={};
  const context={result:null,demo:false,setting:'hospital',account:{profile:{role:'student'}},settingLabel:()=> 'hospitalar',esc:s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'),$:s=>nodes[s]??=( {hidden:false,innerHTML:'',textContent:''} )};
  runInNewContext(source.slice(source.indexOf('function renderResult('),source.indexOf('function loadDemo(')),context);
- context.renderResult({summary:'Test',alerts:[],missing:[],hypotheses:[],conduct:[],references:[],prescription:[],medicationOptions:[{drug:'<script>bad</script>',presentation:'Synthetic presentation',rationale:'Reason',beforeConsidering:'Confirm allergy',avoidWhen:'Do not use when contraindicated'}]},false);
+ context.renderResult({summary:'Test',alerts:[],missing:[],hypotheses:[],conduct:[],references:[],prescription:[],medicationOptions:[{drug:'<script>bad</script>',category:'confirmation',availability:'Unknown',source:'Synthetic source',presentation:'Synthetic presentation',rationale:'Reason',beforeConsidering:'Confirm allergy',avoidWhen:'Do not use when contraindicated'}]},false);
  const html=nodes['#result-content'].innerHTML;
  assert.ok(!html.includes('<script>'));
  assert.ok(html.includes('&lt;script&gt;'));
- assert.ok(html.includes('Antes de considerar: Confirm allergy'));
- assert.ok(html.includes('Quando evitar: Do not use when contraindicated'));
- assert.ok(html.includes('Opções medicamentosas para discussão'));assert.ok(html.includes('Synthetic presentation'));assert.ok(!html.includes('Nenhuma prescrição completa foi sugerida nesta análise.'));
+ assert.ok(html.includes('Confirm allergy'));
+ assert.ok(html.includes('Do not use when contraindicated'));
+ assert.ok(html.includes('MEDICAMENTOS PARA AVALIAÇÃO CLÍNICA'));assert.ok(html.includes('Synthetic presentation'));assert.ok(!html.includes('Nenhuma prescrição completa foi sugerida nesta análise.'));
 });
 
 
@@ -220,4 +220,37 @@ test('both draft formats show supported medication details and item rationale',a
   for(const field of ['dose','route','frequency','duration','quantity'])assert.ok(html.includes('fixture-'+field));
   assert.ok(html.includes('Reason specific to this item'));assert.ok(html.includes('Indicação: fixture-indication'));assert.ok(html.includes('Contraindicações e cuidados: fixture-precautions'));assert.ok(html.includes('1. fixture-drug'));
  }
+});
+
+
+test('emergency options survive as conditional or avoided without permitting an order',()=>{
+ const option={drug:'Synthetic agent',presentation:'Synthetic presentation',rationale:'Hypothesis',beforeConsidering:'Resolve competing diagnosis',avoidWhen:'Specific risk',availability:'Unknown',source:'Synthetic source',category:'evaluation'};
+ const base={setting:'outpatient',summary:'Synthetic',urgency:'emergency',alerts:['Immediate assessment'],missing:[],hypotheses:[],conduct:[],references:[],outpatientCare:[],hospitalCare:[],prescription:[],medicationOptions:[option,{...option,drug:'Avoided agent',category:'avoid'}],requiredExams:['Exam and reason']};
+ const result=validateClinicalOutput(structuredClone(base),'outpatient');
+ assert.deepEqual(result.medicationOptions.map(o=>o.category),['confirmation','avoid']);
+ assert.equal(result.medicationOptions[0].beforeConsidering,'Resolve competing diagnosis');
+ assert.deepEqual(result.prescription,[]);assert.deepEqual(result.requiredExams,['Exam and reason']);
+ assert.deepEqual(result.alerts,['Immediate assessment']);
+ assert.throws(()=>validateClinicalOutput({...base,medicationOptions:[{...option,category:'administer'}]},'outpatient'));
+ assert.throws(()=>validateClinicalOutput({...base,requiredExams:[17]},'outpatient'));
+ const rx=Object.fromEntries(['drug','presentation','dose','route','frequency','duration','quantity','instructions','preparation','infusion','monitoring','indication','precautions'].map(k=>[k,'Synthetic']));
+ rx.drug=option.drug;rx.safety={status:'ready',reason:'Claimed ready',requiredData:[]};
+ for(const category of ['confirmation','avoid']){
+ const conflict=validateClinicalOutput({...structuredClone(base),urgency:'routine',prescription:[rx],medicationOptions:[{...option,category}]},'outpatient',{age:'40',allergies:'None',medications:'None'});
+ assert.deepEqual(conflict.prescription,[]);assert.equal(conflict.medicationOptions[0].category,category);
+ }
+});
+
+test('assessment categories and exams are separate from copyable prescription',async()=>{
+ const {readFile}=await import('node:fs/promises');const {runInNewContext}=await import('node:vm');
+ const source=await readFile(new URL('../public/plus.js',import.meta.url),'utf8');const nodes={};
+ const context={result:null,demo:false,setting:'outpatient',account:{profile:{role:'doctor'}},settingLabel:()=> 'ambulatorial',esc:String,$:s=>nodes[s]??={}};
+ runInNewContext(source.slice(source.indexOf('function renderResult('),source.indexOf('function loadDemo(')),context);
+ context.renderResult({summary:'Synthetic',urgency:'emergency',alerts:['ALERT'],missing:[],hypotheses:['HYPOTHESIS'],conduct:['PRIORITY'],references:[],prescription:[],requiredExams:['EXAM'],medicationOptions:['evaluation','confirmation','avoid'].map(category=>({drug:'AGENT-'+category,presentation:'Form',rationale:'Reason',beforeConsidering:'Condition',avoidWhen:'Risk',availability:'Unknown',source:'Source',category}))},false);
+ const html=nodes['#result-content'].innerHTML;
+ for(const label of ['OPÇÃO PARA AVALIAÇÃO','DEPENDE DE CONFIRMAÇÃO','NÃO INDICADO NO MOMENTO','Exames necessários'])assert.ok(html.includes(label));
+ assert.ok(html.indexOf('Alertas clínicos')<html.indexOf('MEDICAMENTOS PARA AVALIAÇÃO CLÍNICA'));
+ assert.ok(html.indexOf('MEDICAMENTOS PARA AVALIAÇÃO CLÍNICA')<html.indexOf('Exames necessários'));
+ const draft=html.split('<textarea')[1].split('</textarea>')[0];
+ assert.ok(!draft.includes('AGENT-'));assert.ok(!draft.includes('OPÇÃO PARA AVALIAÇÃO'));
 });
